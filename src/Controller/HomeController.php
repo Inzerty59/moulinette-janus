@@ -15,4 +15,16 @@ final class HomeController extends AbstractController
             'controller_name' => 'HomeController',
         ]);
     }
+
+    #[Route('/moulinette', name: 'app_moulinette')]
+    public function moulinette(): Response
+    {
+        return $this->render('home/moulinette.html.twig');
+    }
+
+    #[Route('/agencies', name: 'app_agencies')]
+    public function agencies(): Response
+    {
+        return $this->render('home/agencies.html.twig');
+    }
 }

@@ -11,6 +11,13 @@
             <a href="{{ path('admin') }}">Admin</a>
         {% endif %}
     </nav>
+    {% if app.request.attributes.get('_route') != 'app_login' %}
+        <nav class="mb-4">
+            <a class="btn btn-primary" href="{{ path('app_home') }}">Home</a>
+            <a class="btn btn-primary" href="{{ path('app_moulinette') }}">Moulinette</a>
+            <a class="btn btn-secondary" href="{{ path('app_agencies') }}">Agencies Management</a>
+        </nav>
+    {% endif %}
     {% block body %}{% endblock %}
 </body>
 </html>
