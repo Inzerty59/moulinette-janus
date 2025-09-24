@@ -7,6 +7,8 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use Symfony\Component\HttpFoundation\Response;
+use App\Entity\Agency;
+use App\Entity\AgencyRubric;
 
 #[AdminDashboard(routePath: '/admin', routeName: 'admin')]
 class DashboardController extends AbstractDashboardController
@@ -47,5 +49,7 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home');
         yield MenuItem::linkToCrud('Utilisateurs', 'fas fa-users', \App\Entity\User::class);
         yield MenuItem::linkToUrl('Go to site', 'fas fa-globe', '/');
+        yield MenuItem::linkToCrud('Agences', 'fa fa-building', Agency::class);
+        yield MenuItem::linkToCrud('Rubriques', 'fa fa-list', AgencyRubric::class);
     }
 }
