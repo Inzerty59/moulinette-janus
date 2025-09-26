@@ -1,8 +1,44 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Hello HomeController!{% endblock %}
+{% block title %}Moulinette Janus{% endblock %}
 
 {% block body %}
-    <h1>Welcome to your dashboard</h1>
-    <p>This area is accessible only to authenticated users.</p>
+
+<h1>Moulinette Janus</h1>
+
+{% if message %}
+    <div class="alert alert-{{ message[0] }}">{{ message[1]|raw }}</div>
+{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+	<div style="margin-bottom: 1em;">
+		<label for="agency-select">Veuillez choisir votre agence :</label>
+		<select id="agency-select" name="agency">
+			<option value="">Choix de l'agence</option>
+			{% for agency in agencies %}
+				<option value="{{ agency.id }}">{{ agency.name }}</option>
+			{% endfor %}
+		</select>
+	</div>
+
+	<div style="margin-bottom: 1em;">
+		<label>Sélectionnez le fichier Excel "Cotisation"</label>
+		<input type="file" name="cotisation_file" accept=".xlsx,.xls,.csv">
+	</div>
+	<div style="margin-bottom: 1em;">
+		<label>Sélectionnez le fichier Excel "Matricule"</label>
+		<input type="file" name="matricule_file" accept=".xlsx,.xls,.csv">
+	</div>
+	<div style="margin-bottom: 1em;">
+		<label>Sélectionnez le fichier Excel "Rubrique"</label>
+		<input type="file" name="rubrique_file" accept=".xlsx,.xls,.csv">
+	</div>
+	<div style="margin-bottom: 1em;">
+		<label>Sélectionner le fichier Excel à écrire</label>
+		<input type="file" name="output_file" accept=".xlsx,.xls,.csv">
+	</div>
+	<div style="text-align: right;">
+		<button type="submit" class="btn btn-primary">Exécuter</button>
+	</div>
+</form>
 {% endblock %}
