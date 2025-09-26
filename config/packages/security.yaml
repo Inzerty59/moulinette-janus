@@ -41,8 +41,6 @@ security:
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/logout, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
-        - { path: ^/moulinette, roles: ROLE_USER }
-        - { path: ^/agencies, roles: ROLE_USER }
         - { path: ^/, roles: ROLE_USER }
 
 when@test:

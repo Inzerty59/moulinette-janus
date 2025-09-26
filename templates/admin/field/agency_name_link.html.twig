@@ -1,0 +1,5 @@
+{% if app.request.get('_route') matches '/_index$/' %}
+    <a href="{{ ea_url().setAction('detail').setEntityId(entity.primaryKeyValue) }}">{{ field.value }}</a>
+{% else %}
+    {{ field.value }}
+{% endif %}
