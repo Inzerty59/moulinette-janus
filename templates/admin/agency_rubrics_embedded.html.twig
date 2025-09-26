@@ -1,0 +1,26 @@
+{% if field.value is iterable %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Nom</th>
+                <th>Catégorie</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rubric in field.value %}
+                <tr>
+                    <td>{{ rubric.code }}</td>
+                    <td>
+                        <a href="{{ ea_url().setController('App\\Controller\\Admin\\AgencyRubricCrudController').setAction('detail').setEntityId(rubric.id) }}">{{ rubric.name }}</a>
+                    </td>
+                    <td>{{ rubric.category }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ path('admin_agency_rubric_new', {'agency': entity.primaryKeyValue}) }}" class="btn btn-success mt-2">Ajouter une rubrique</a>
+{% else %}
+    <p>Aucune rubrique liée à cette agence.</p>
+    <a href="{{ path('admin_agencyrubric_new', {'agency': entity.primaryKeyValue}) }}" class="btn btn-success mt-2">Ajouter une rubrique</a>
+{% endif %}

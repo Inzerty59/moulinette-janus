@@ -44,7 +44,7 @@ class Agency
     /**
      * @var Collection<int, AgencyRubric>
      */
-    #[ORM\OneToMany(targetEntity: AgencyRubric::class, mappedBy: 'agency')]
+    #[ORM\OneToMany(targetEntity: AgencyRubric::class, mappedBy: 'agency', cascade: ['remove'])]
     private Collection $agencyRubrics;
 
     public function __construct()
