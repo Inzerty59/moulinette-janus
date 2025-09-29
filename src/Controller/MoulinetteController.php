@@ -6,9 +6,17 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Psr\Log\LoggerInterface;
 
 final class MoulinetteController extends AbstractController
 {
+    private LoggerInterface $logger;
+
+    public function __construct(LoggerInterface $logger)
+    {
+        $this->logger = $logger;
+    }
+
     #[Route('/', name: 'app_home')]
     public function index(\App\Repository\AgencyRepository $agencyRepository): Response
     {
@@ -76,47 +84,91 @@ final class MoulinetteController extends AbstractController
                 $matriculeRows = $readAllRows($_FILES['matricule_file']['tmp_name']);
                 $outputRows = $readAllRows($_FILES['output_file']['tmp_name']);
 
-                if ($selectedAgency && $agencyRubrics && $rubriqueRows) {
-                    $html = '<b>Correspondance rubriques agence (code, catégorie, nom, valeur trouvée) :</b><table border="1" cellpadding="3"><tr><th>Code</th><th>Catégorie</th><th>Nom</th><th>Valeur trouvée</th></tr>';
+                if ($selectedAgency && $agencyRubrics) {
+                    $html = '<b>Correspondance rubriques agence (code, catégorie, nom, valeur trouvée) :</b><table border="1" cellpadding="3"><tr><th>Code</th><th>Catégorie</th><th>Nom</th><th>Valeur trouvée</th><th>Détail recherche</th></tr>';
+                    $rubriqueHeader = isset($rubriqueRows[0]) ? array_map('strtolower', $rubriqueRows[0]) : [];
+                    $isJALCOT = in_array('mont_base', $rubriqueHeader);
+                    $normalize = function($str) {
+                        $str = strtolower($str);
+                        $str = preg_replace('/[\s\p{Zs}]+/u', '', $str);
+                        $str = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+                        return $str;
+                    };
                     foreach ($agencyRubrics as $rubric) {
                         $code = trim($rubric->getCode());
                         $cat = trim($rubric->getCategory());
                         $nom = trim($rubric->getName());
                         $valeur = '';
-                        $normalize = function($str) {
-                            $str = strtolower($str);
-                            $str = preg_replace('/[\s\p{Zs}]+/u', '', $str);
-                            $str = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
-                            return $str;
-                        };
-                        foreach ($rubriqueRows as $idx => $row) {
-                            if (isset($row[1], $row[6])) {
-                                $rowCode = trim((string)$row[1]);
-                                if ($normalize($cat) === 'base') {
-                                    if ($normalize($rowCode) === $normalize($code)) {
-                                        $valeur = $row[6];
-                                        $source = 'Rubrique (colonne Base, code seul)';
-                                        $ligneTrouvee = $row;
-                                        break;
+                        $detail = '';
+                        $catNorm = $normalize($cat);
+                        $found = false;
+                        $sources = [
+                            [
+                                'rows' => $rubriqueRows,
+                                'type' => 'rubrique',
+                                'colMapping' => $isJALCOT ? [
+                                    'base' => 4,
+                                    'salarié montant' => 6,
+                                    'patronal montant' => 8,
+                                    'total' => 10,
+                                ] : [
+                                    'base' => 6,
+                                    'à payer' => 7,
+                                    'à retenir' => 8,
+                                    'patronal montant' => 9,
+                                    'total' => 11,
+                                ]
+                            ],
+                            [
+                                'rows' => $cotisationRows,
+                                'type' => 'cotisation',
+                                'colMapping' => [
+                                    'base' => 4,
+                                    'salarié montant' => 6,
+                                    'patronal montant' => 8,
+                                    'total' => 10,
+                                ]
+                            ],
+                            [
+                                'rows' => $matriculeRows,
+                                'type' => 'matricule',
+                                'colMapping' => [
+                                    'base' => 2,
+                                    'à payer' => 3,
+                                    'à retenir' => 4,
+                                    'patronal montant' => 5,
+                                    'total' => 6,
+                                ]
+                            ],
+                        ];
+                        foreach ($sources as $source) {
+                            $rows = $source['rows'];
+                            $sourceType = $source['type'];
+                            $colMapping = $source['colMapping'];
+                            $colMontant = isset($colMapping[$catNorm]) ? $colMapping[$catNorm] : null;
+                            if ($colMontant === null) continue;
+                            foreach ($rows as $rowIdx => $row) {
+                                if ($rowIdx === 0) continue;
+                                if (isset($row[1]) && $normalize($row[1]) === $normalize($code)) {
+                                    if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
+                                        $valeur = $rubric->formatValue($row[$colMontant]);
+                                        $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' en colonne montant : ' . $colMontant;
+                                        $found = true;
+                                    } else {
+                                        $valeur = 0;
+                                        $detail = 'Colonne trouvée mais vide, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType;
+                                        $found = true;
                                     }
-                                } else if (isset($row[2])) {
-                                    $rowCat = trim((string)$row[2]);
-                                    if (
-                                        $normalize($rowCode) === $normalize($code) &&
-                                        $normalize($rowCat) === $normalize($cat)
-                                    ) {
-                                        $valeur = $row[6];
-                                        $source = 'Rubrique (colonne Base, code+catégorie)';
-                                        $ligneTrouvee = $row;
-                                        break;
-                                    }
+                                    break;
                                 }
                             }
+                            if ($found) break;
                         }
-                        if ($valeur === '') {
-                            $html .= '<tr style="background:#ffe0e0"><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($cat) . '</td><td>' . htmlspecialchars($nom) . '</td><td></td></tr>';
+                        if (!$found) {
+                            $detail = 'Code rubrique non trouvé ou montant absent dans les fichiers (' . $code . ', ' . $cat . ')';
+                            $html .= '<tr style="background:#ffe0e0"><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($cat) . '</td><td>' . htmlspecialchars($nom) . '</td><td><b>Non trouvé</b></td><td>' . htmlspecialchars($detail ?: 'Aucune correspondance') . '</td></tr>';
                         } else {
-                            $html .= '<tr><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($cat) . '</td><td>' . htmlspecialchars($nom) . '</td><td>' . htmlspecialchars($valeur) . '</td></tr>';
+                            $html .= '<tr><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($cat) . '</td><td>' . htmlspecialchars($nom) . '</td><td>' . htmlspecialchars($valeur) . '</td><td>' . htmlspecialchars($detail) . '</td></tr>';
                         }
                     }
                     $html .= '</table>';
@@ -127,6 +179,7 @@ final class MoulinetteController extends AbstractController
                 $message = ['error', implode('<br>', $errors)];
             }
             }
+
 
             return $this->render('moulinette/index.html.twig', [
                 'agencies' => $agencies,

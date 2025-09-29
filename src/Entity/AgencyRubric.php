@@ -14,18 +14,18 @@ class AgencyRubric
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 32)]
-    #[Assert\NotBlank]
+    #[ORM\Column(length: 32, nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
     #[Assert\Length(max: 32)]
     private ?string $code = null;
 
-    #[ORM\Column(length: 255)]
-    #[Assert\NotBlank]
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
     #[Assert\Length(max: 255)]
     private ?string $name = null;
 
-    #[ORM\Column(length: 255)]
-    #[Assert\NotBlank]
+    #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\NotBlank(allowNull: true)]
     #[Assert\Length(max: 255)]
     private ?string $category = null;
 
@@ -128,5 +128,14 @@ class AgencyRubric
         $this->updatedAt = $updatedAt;
 
         return $this;
+    }
+
+    public function formatValue($value): ?float
+    {
+        if (is_string($value)) {
+            $value = (float) $value;
+        }
+        
+        return $value !== null ? abs($value) : null;
     }
 }
