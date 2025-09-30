@@ -27,8 +27,8 @@ final class MoulinetteController extends AbstractController
         $agencyRubrics = [];
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $allowedMimeTypes = [
-                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-                    'application/vnd.ms-excel', // .xls
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-excel',
                     'text/csv',
                     'application/csv',
                     'text/plain',
@@ -90,9 +90,9 @@ final class MoulinetteController extends AbstractController
                     $isJALCOT = in_array('mont_base', $rubriqueHeader);
                     $normalize = function($str) {
                         $str = strtolower($str);
-                        $str = iconv('UTF-8', 'ASCII//TRANSLIT', $str); // enlève les accents
-                        $str = preg_replace('/[^a-z0-9 ]/i', '', $str); // enlève tout sauf lettres, chiffres et espaces
-                        $str = preg_replace('/[\s\p{Zs}]+/u', ' ', $str); // remplace espaces multiples par un seul
+                        $str = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+                        $str = preg_replace('/[^a-z0-9 ]/i', '', $str);
+                        $str = preg_replace('/[\s\p{Zs}]+/u', ' ', $str);
                         $str = trim($str);
                         return $str;
                     };
@@ -104,7 +104,6 @@ final class MoulinetteController extends AbstractController
                         $detail = '';
                         $catNorm = $normalize($cat);
                         $found = false;
-                        // Debug : afficher code et catégorie normalisée
                         $html .= '<tr style="background:#e0f7fa"><td colspan="5">DEBUG : code=' . htmlspecialchars($code) . ', catégorie=' . htmlspecialchars($cat) . ', catégorie normalisée=' . htmlspecialchars($catNorm) . '</td></tr>';
                         $sources = [
                             [
@@ -154,9 +153,30 @@ final class MoulinetteController extends AbstractController
                             $matchCount = 0;
                             foreach ($rows as $rowIdx => $row) {
                                 if ($rowIdx === 0) continue;
-                                if (isset($row[1]) && $normalize($row[1]) === $normalize($code)) {
+                                
+                                $searchMatch = false;
+                                if ($code === 'total' && $catNorm === 'a payer' && $sourceType === 'rubrique') {
+                                    if (isset($row[2])) {
+                                        $rowName = strtolower($row[2]);
+                                        $searchName = strtolower($nom);
+                                        if (stripos($rowName, 'brut') !== false && stripos($searchName, 'brut') !== false) {
+                                            $searchMatch = true;
+                                        } elseif (stripos($rowName, 'fiscal') !== false && stripos($searchName, 'fiscal') !== false) {
+                                            $searchMatch = true;
+                                        } elseif (stripos($rowName, 'net') !== false && stripos($searchName, 'net') !== false) {
+                                            if (stripos($rowName, 'net (1)') === false && stripos($rowName, 'net    ***') !== false) {
+                                                $searchMatch = true;
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    if (isset($row[1]) && $normalize($row[1]) === $normalize($code)) {
+                                        $searchMatch = true;
+                                    }
+                                }
+                                
+                                if ($searchMatch) {
                                     $matchCount++;
-                                    // Pour 3031, prendre la seconde occurrence
                                     if ($code === '3031' && $matchCount === 2) {
                                         if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
                                             $valeur = $rubric->formatValue($row[$colMontant]);
@@ -169,7 +189,6 @@ final class MoulinetteController extends AbstractController
                                         }
                                         break;
                                     }
-                                    // Pour les autres codes, prendre la première occurrence
                                     if ($code !== '3031' && $matchCount === 1) {
                                         if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
                                             $valeur = $rubric->formatValue($row[$colMontant]);
