@@ -121,11 +121,11 @@ final class MoulinetteController extends AbstractController
                                 'rows' => $matriculeRows,
                                 'type' => 'matricule',
                                 'colMapping' => [
-                                    'base' => 2,
-                                    'a payer' => 3,
-                                    'a retenir' => 4,
-                                    'patronal montant' => 5,
-                                    'total' => 6,
+                                    'brut' => 4, // Brut total
+                                    'tranche a' => 12, // Tranche A
+                                    'tranche b' => 13, // Tranche B
+                                    'heures travaillees' => 10, // Hrs Travaillées
+                                    'net a payer' => 9, // Net Payer
                                 ]
                             ],
                             [
