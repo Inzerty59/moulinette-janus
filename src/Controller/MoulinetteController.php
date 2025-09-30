@@ -90,8 +90,10 @@ final class MoulinetteController extends AbstractController
                     $isJALCOT = in_array('mont_base', $rubriqueHeader);
                     $normalize = function($str) {
                         $str = strtolower($str);
-                        $str = preg_replace('/[\s\p{Zs}]+/u', '', $str);
-                        $str = iconv('UTF-8', 'ASCII//TRANSLIT', $str);
+                        $str = iconv('UTF-8', 'ASCII//TRANSLIT', $str); // enlève les accents
+                        $str = preg_replace('/[^a-z0-9 ]/i', '', $str); // enlève tout sauf lettres, chiffres et espaces
+                        $str = preg_replace('/[\s\p{Zs}]+/u', ' ', $str); // remplace espaces multiples par un seul
+                        $str = trim($str);
                         return $str;
                     };
                     foreach ($agencyRubrics as $rubric) {
@@ -102,29 +104,15 @@ final class MoulinetteController extends AbstractController
                         $detail = '';
                         $catNorm = $normalize($cat);
                         $found = false;
+                        // Debug : afficher code et catégorie normalisée
+                        $html .= '<tr style="background:#e0f7fa"><td colspan="5">DEBUG : code=' . htmlspecialchars($code) . ', catégorie=' . htmlspecialchars($cat) . ', catégorie normalisée=' . htmlspecialchars($catNorm) . '</td></tr>';
                         $sources = [
-                            [
-                                'rows' => $rubriqueRows,
-                                'type' => 'rubrique',
-                                'colMapping' => $isJALCOT ? [
-                                    'base' => 4,
-                                    'salarié montant' => 6,
-                                    'patronal montant' => 8,
-                                    'total' => 10,
-                                ] : [
-                                    'base' => 6,
-                                    'à payer' => 7,
-                                    'à retenir' => 8,
-                                    'patronal montant' => 9,
-                                    'total' => 11,
-                                ]
-                            ],
                             [
                                 'rows' => $cotisationRows,
                                 'type' => 'cotisation',
                                 'colMapping' => [
                                     'base' => 4,
-                                    'salarié montant' => 6,
+                                    'salarie montant' => 6,
                                     'patronal montant' => 8,
                                     'total' => 10,
                                 ]
@@ -134,10 +122,26 @@ final class MoulinetteController extends AbstractController
                                 'type' => 'matricule',
                                 'colMapping' => [
                                     'base' => 2,
-                                    'à payer' => 3,
-                                    'à retenir' => 4,
+                                    'a payer' => 3,
+                                    'a retenir' => 4,
                                     'patronal montant' => 5,
                                     'total' => 6,
+                                ]
+                            ],
+                            [
+                                'rows' => $rubriqueRows,
+                                'type' => 'rubrique',
+                                'colMapping' => $isJALCOT ? [
+                                    'base' => 4,
+                                    'salarie montant' => 6,
+                                    'patronal montant' => 8,
+                                    'total' => 10,
+                                ] : [
+                                    'base' => 6,
+                                    'a payer' => 7,
+                                    'a retenir' => 8,
+                                    'patronal montant' => 9,
+                                    'total' => 11,
                                 ]
                             ],
                         ];
@@ -147,19 +151,37 @@ final class MoulinetteController extends AbstractController
                             $colMapping = $source['colMapping'];
                             $colMontant = isset($colMapping[$catNorm]) ? $colMapping[$catNorm] : null;
                             if ($colMontant === null) continue;
+                            $matchCount = 0;
                             foreach ($rows as $rowIdx => $row) {
                                 if ($rowIdx === 0) continue;
                                 if (isset($row[1]) && $normalize($row[1]) === $normalize($code)) {
-                                    if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
-                                        $valeur = $rubric->formatValue($row[$colMontant]);
-                                        $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' en colonne montant : ' . $colMontant;
-                                        $found = true;
-                                    } else {
-                                        $valeur = 0;
-                                        $detail = 'Colonne trouvée mais vide, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType;
-                                        $found = true;
+                                    $matchCount++;
+                                    // Pour 3031, prendre la seconde occurrence
+                                    if ($code === '3031' && $matchCount === 2) {
+                                        if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
+                                            $valeur = $rubric->formatValue($row[$colMontant]);
+                                            $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' (2ème occurrence) en colonne montant : ' . $colMontant;
+                                            $found = true;
+                                        } else {
+                                            $valeur = 0;
+                                            $detail = 'Colonne trouvée mais vide, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType . ' (2ème occurrence)';
+                                            $found = true;
+                                        }
+                                        break;
                                     }
-                                    break;
+                                    // Pour les autres codes, prendre la première occurrence
+                                    if ($code !== '3031' && $matchCount === 1) {
+                                        if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
+                                            $valeur = $rubric->formatValue($row[$colMontant]);
+                                            $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' en colonne montant : ' . $colMontant;
+                                            $found = true;
+                                        } else {
+                                            $valeur = 0;
+                                            $detail = 'Colonne trouvée mais vide, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType;
+                                            $found = true;
+                                        }
+                                        break;
+                                    }
                                 }
                             }
                             if ($found) break;
