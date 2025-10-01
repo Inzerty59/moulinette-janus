@@ -8,6 +8,8 @@ use App\Entity\Agency;
 use App\Exception\FileValidationException;
 use App\Exception\AgencyNotFoundException;
 use App\Exception\MoulinetteException;
+use App\Exception\FileProcessingException;
+use App\Exception\EmptyFileException;
 use App\Repository\AgencyRepository;
 use Psr\Log\LoggerInterface;
 
@@ -76,6 +78,20 @@ class MoulinetteService
                 'errors' => $e->getErrors()
             ]);
             return MoulinetteResultDTO::error($e->getErrorsAsString());
+
+        } catch (EmptyFileException $e) {
+            $this->logger->warning('Fichier vide détecté', [
+                'agency_id' => $request->getAgencyId(),
+                'message' => $e->getMessage()
+            ]);
+            return MoulinetteResultDTO::error($e->getMessage());
+
+        } catch (FileProcessingException $e) {
+            $this->logger->error('Erreur de traitement de fichier', [
+                'agency_id' => $request->getAgencyId(),
+                'message' => $e->getMessage()
+            ]);
+            return MoulinetteResultDTO::error($e->getMessage());
 
         } catch (AgencyNotFoundException $e) {
             $this->logger->warning('Agence non trouvée', [

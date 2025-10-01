@@ -30,9 +30,18 @@ class RubricProcessingService
         $isJALCOT = in_array('mont_base', $rubriqueHeader);
 
         foreach ($agencyRubrics as $rubric) {
-            $code = trim($rubric->getCode());
-            $category = trim($rubric->getCategory());
-            $name = trim($rubric->getName());
+            $code = trim($rubric->getCode() ?? '');
+            $category = trim($rubric->getCategory() ?? '');
+            $name = trim($rubric->getName() ?? '');
+            
+            if (empty($code)) {
+                $this->logger->warning('Rubrique ignorée car sans code', [
+                    'rubric_id' => $rubric->getId(),
+                    'category' => $category,
+                    'name' => $name
+                ]);
+                continue;
+            }
             
             $result = $this->processRubric(
                 $code,
@@ -88,7 +97,7 @@ class RubricProcessingService
     {
         $totalCharges = 0;
         foreach ($cotisationRows as $rowIdx => $row) {
-            if ($rowIdx === 0) continue; // Skip header
+            if ($rowIdx === 0) continue;
             
             if (isset($row[8]) && is_numeric($row[8])) {
                 $totalCharges += floatval($row[8]);
@@ -147,12 +156,6 @@ class RubricProcessingService
         return $this->orderSourcesByPriority($baseSources, $categoryNormalized);
     }
 
-    /**
-     * Ordonne les sources par priorité selon la catégorie
-     *
-     * @param array<int, array{rows: array, type: string, colMapping: array}> $sources
-     * @return array<int, array{rows: array, type: string, colMapping: array}>
-     */
     private function orderSourcesByPriority(array $sources, string $categoryNormalized): array
     {
         $orderedSources = [];
@@ -225,7 +228,7 @@ class RubricProcessingService
 
         $matchCount = 0;
         foreach ($rows as $rowIdx => $row) {
-            if ($rowIdx === 0) continue; // Skip header
+            if ($rowIdx === 0) continue;
 
             $searchMatch = $this->isRowMatch($code, $name, $row, $categoryNormalized, $sourceType);
             

@@ -21,6 +21,14 @@ class ExcelReaderService
         try {
             $spreadsheet = IOFactory::load($file->getPathname());
             $sheet = $spreadsheet->getActiveSheet();
+            
+            if ($sheet->getHighestRow() <= 1 && $sheet->getHighestColumn() === 'A') {
+                $cellValue = $sheet->getCell('A1')->getValue();
+                if (empty($cellValue)) {
+                    throw new \App\Exception\EmptyFileException($file->getClientOriginalName());
+                }
+            }
+            
             $rows = [];
 
             foreach ($sheet->getRowIterator() as $row) {
@@ -35,6 +43,10 @@ class ExcelReaderService
                 $rows[] = $rowData;
             }
 
+            if (count($rows) < 1) {
+                throw new \App\Exception\EmptyFileException($file->getClientOriginalName());
+            }
+
             $this->logger->info('Fichier lu avec succès', [
                 'filename' => $file->getClientOriginalName(),
                 'rows_count' => count($rows)
@@ -42,12 +54,19 @@ class ExcelReaderService
 
             return $rows;
 
+        } catch (\App\Exception\EmptyFileException $e) {
+            throw $e;
+            
         } catch (\Exception $e) {
             $this->logger->error('Erreur lors de la lecture du fichier', [
                 'filename' => $file->getClientOriginalName(),
                 'error' => $e->getMessage()
             ]);
-            throw new \Exception("Impossible de lire le fichier {$file->getClientOriginalName()}: " . $e->getMessage());
+            throw new \App\Exception\FileProcessingException(
+                $file->getClientOriginalName(),
+                'la lecture',
+                $e
+            );
         }
     }
 

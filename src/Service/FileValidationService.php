@@ -3,9 +3,16 @@
 namespace App\Service;
 
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 
 class FileValidationService
 {
+    private FileTypeDetectionService $fileTypeDetection;
+
+    public function __construct(FileTypeDetectionService $fileTypeDetection)
+    {
+        $this->fileTypeDetection = $fileTypeDetection;
+    }
     private const ALLOWED_MIME_TYPES = [
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.ms-excel',
@@ -19,6 +26,12 @@ class FileValidationService
         'matricule_file',
         'rubrique_file',
         'output_file',
+    ];
+
+    private const FILE_NAME_KEYWORDS = [
+        'cotisation_file' => 'cot',
+        'matricule_file' => 'mat',
+        'rubrique_file' => 'rub',
     ];
 
     public function validateUploadedFiles(array $files): array
@@ -38,8 +51,27 @@ class FileValidationService
                 continue;
             }
 
+            if ($file->getSize() > 10 * 1024 * 1024) {
+                $errors[] = "Le fichier {$fileKey} est trop volumineux (maximum 10MB).";
+                continue;
+            }
+
+            if ($file->getSize() === 0) {
+                $errors[] = "Le fichier {$fileKey} est vide.";
+                continue;
+            }
+
             if (!$this->isValidMimeType($file)) {
                 $errors[] = "Le fichier {$fileKey} n'est pas un fichier Excel ou CSV valide.";
+                continue;
+            }
+        }
+
+        if (empty($errors)) {
+            $fileOrderAnalysis = $this->fileTypeDetection->analyzeFileOrder($files);
+            if (!empty($fileOrderAnalysis['errors'])) {
+                $errors = array_merge($errors, $fileOrderAnalysis['errors']);
+                $errors = array_merge($errors, $fileOrderAnalysis['suggestions']);
             }
         }
 
