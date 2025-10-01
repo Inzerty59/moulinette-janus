@@ -11,6 +11,7 @@
         "doctrine/doctrine-migrations-bundle": "^3.4",
         "doctrine/orm": "^3.5",
         "easycorp/easyadmin-bundle": "^4.25",
+        "phpoffice/phpspreadsheet": "^5.1",
         "symfony/console": "7.3.*",
         "symfony/dotenv": "7.3.*",
         "symfony/flex": "^2",
