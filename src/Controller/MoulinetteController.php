@@ -59,10 +59,6 @@ final class MoulinetteController extends AbstractController
             }
 
             if (empty($errors)) {
-                $html = '';
-
-                $html = '';
-
                 $readAllRows = function($filePath) {
                     $spreadsheet = IOFactory::load($filePath);
                     $sheet = $spreadsheet->getActiveSheet();
@@ -85,7 +81,6 @@ final class MoulinetteController extends AbstractController
                 $outputRows = $readAllRows($_FILES['output_file']['tmp_name']);
 
                 if ($selectedAgency && $agencyRubrics) {
-                    $html = '<b>Correspondance rubriques agence (code, catégorie, nom, valeur trouvée) :</b><table border="1" cellpadding="3"><tr><th>Code</th><th>Catégorie</th><th>Nom</th><th>Valeur trouvée</th><th>Détail recherche</th></tr>';
                     $rubriqueHeader = isset($rubriqueRows[0]) ? array_map('strtolower', $rubriqueRows[0]) : [];
                     $isJALCOT = in_array('mont_base', $rubriqueHeader);
                     $normalize = function($str) {
@@ -96,6 +91,10 @@ final class MoulinetteController extends AbstractController
                         $str = trim($str);
                         return $str;
                     };
+                    
+                    $valeursParCode = [];
+                    
+                    $rubriquesPar0 = ['1175', '1201', '4072', '4076', '5101', '5103'];
                     foreach ($agencyRubrics as $rubric) {
                         $code = trim($rubric->getCode());
                         $cat = trim($rubric->getCategory());
@@ -104,7 +103,19 @@ final class MoulinetteController extends AbstractController
                         $detail = '';
                         $catNorm = $normalize($cat);
                         $found = false;
-                        $html .= '<tr style="background:#e0f7fa"><td colspan="5">DEBUG : code=' . htmlspecialchars($code) . ', catégorie=' . htmlspecialchars($cat) . ', catégorie normalisée=' . htmlspecialchars($catNorm) . '</td></tr>';
+                        
+                        if ($code === 'Agence' && $catNorm === 'patronal montant') {
+                            $totalCharges = 0;
+                            foreach ($cotisationRows as $rowIdx => $row) {
+                                if ($rowIdx === 0) continue;
+                                if (isset($row[8]) && is_numeric($row[8])) {
+                                    $totalCharges += floatval($row[8]);
+                                }
+                            }
+                            $valeur = number_format($totalCharges, 2, ',', ' ');
+                            $detail = 'Somme calculée des charges patronales du fichier cotisation';
+                            $found = true;
+                        } else {
                         $sources = [
                             [
                                 'rows' => $cotisationRows,
@@ -121,6 +132,7 @@ final class MoulinetteController extends AbstractController
                                 'type' => 'matricule',
                                 'colMapping' => [
                                     'brut' => 4, // Brut total
+                                    'brut total' => 4, // Brut total
                                     'tranche a' => 12, // Tranche A
                                     'tranche b' => 13, // Tranche B
                                     'heures travaillees' => 10, // Hrs Travaillées
@@ -130,26 +142,87 @@ final class MoulinetteController extends AbstractController
                             [
                                 'rows' => $rubriqueRows,
                                 'type' => 'rubrique',
-                                'colMapping' => $isJALCOT ? [
-                                    'base' => 4,
-                                    'salarie montant' => 6,
-                                    'patronal montant' => 8,
-                                    'total' => 10,
-                                ] : [
+                                'colMapping' => [
                                     'base' => 6,
                                     'a payer' => 7,
                                     'a retenir' => 8,
-                                    'patronal montant' => 9,
+                                    'salarie montant' => 7,
+                                    'patronal montant' => 8,
                                     'total' => 11,
                                 ]
                             ],
                         ];
+                        
+                        if ($catNorm === 'patronal montant') {
+                            $sources = array_filter($sources, function($s) { return $s['type'] === 'cotisation'; }) + 
+                                      array_filter($sources, function($s) { return $s['type'] !== 'cotisation'; });
+                        } elseif ($catNorm === 'salarie montant') {
+                            $sourcesOrdered = [];
+                            foreach ($sources as $s) {
+                                if ($s['type'] === 'rubrique') $sourcesOrdered[] = $s;
+                            }
+                            foreach ($sources as $s) {
+                                if ($s['type'] === 'cotisation') $sourcesOrdered[] = $s;
+                            }
+                            foreach ($sources as $s) {
+                                if ($s['type'] === 'matricule') $sourcesOrdered[] = $s;
+                            }
+                            $sources = $sourcesOrdered;
+                        } elseif (in_array($catNorm, ['a payer', 'a retenir'])) {
+                            $sources = array_filter($sources, function($s) { return $s['type'] === 'rubrique'; }) + 
+                                      array_filter($sources, function($s) { return $s['type'] !== 'rubrique'; });
+                        } elseif ($catNorm === 'base') {
+                            $sourcesOrdered = [];
+                            foreach ($sources as $s) {
+                                if ($s['type'] === 'cotisation') $sourcesOrdered[] = $s;
+                            }
+                            foreach ($sources as $s) {
+                                if ($s['type'] === 'rubrique') $sourcesOrdered[] = $s;
+                            }
+                            foreach ($sources as $s) {
+                                if ($s['type'] === 'matricule') $sourcesOrdered[] = $s;
+                            }
+                            $sources = $sourcesOrdered;
+                        }
                         foreach ($sources as $source) {
                             $rows = $source['rows'];
                             $sourceType = $source['type'];
                             $colMapping = $source['colMapping'];
-                            $colMontant = isset($colMapping[$catNorm]) ? $colMapping[$catNorm] : null;
-                            if ($colMontant === null) continue;
+                            
+                            $colonnesAEssayer = [];
+                            
+                            if ($catNorm === 'base') {
+                                if ($sourceType === 'cotisation' && isset($colMapping['base'])) {
+                                    $colonnesAEssayer[] = $colMapping['base'];
+                                } elseif ($sourceType === 'rubrique' && isset($colMapping['base'])) {
+                                    $colonnesAEssayer[] = $colMapping['base'];
+                                }
+                            } elseif ($catNorm === 'patronal montant') {
+                                if ($sourceType === 'cotisation' && isset($colMapping['patronal montant'])) {
+                                    $colonnesAEssayer[] = $colMapping['patronal montant'];
+                                }
+                            } elseif ($catNorm === 'salarie montant') {
+                                if ($sourceType === 'rubrique' && isset($colMapping['a retenir'])) {
+                                    $colonnesAEssayer[] = $colMapping['a retenir']; // Pour 5110 salarié montant
+                                } elseif ($sourceType === 'cotisation' && isset($colMapping['salarie montant'])) {
+                                    $colonnesAEssayer[] = $colMapping['salarie montant'];
+                                }
+                            } elseif ($catNorm === 'a payer') {
+                                if ($sourceType === 'rubrique' && isset($colMapping['a payer'])) {
+                                    $colonnesAEssayer[] = $colMapping['a payer'];
+                                }
+                            } elseif ($catNorm === 'a retenir') {
+                                if ($sourceType === 'rubrique' && isset($colMapping['a retenir'])) {
+                                    $colonnesAEssayer[] = $colMapping['a retenir'];
+                                }
+                            }
+                            
+                            if (empty($colonnesAEssayer) && isset($colMapping[$catNorm])) {
+                                $colonnesAEssayer[] = $colMapping[$catNorm];
+                            }
+                            
+                            if (empty($colonnesAEssayer)) continue;
+                            
                             $matchCount = 0;
                             foreach ($rows as $rowIdx => $row) {
                                 if ($rowIdx === 0) continue;
@@ -177,44 +250,193 @@ final class MoulinetteController extends AbstractController
                                 
                                 if ($searchMatch) {
                                     $matchCount++;
-                                    if ($code === '3031' && $matchCount === 2) {
-                                        if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
-                                            $valeur = $rubric->formatValue($row[$colMontant]);
-                                            $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' (2ème occurrence) en colonne montant : ' . $colMontant;
-                                            $found = true;
-                                        } else {
-                                            $valeur = 0;
-                                            $detail = 'Colonne trouvée mais vide, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType . ' (2ème occurrence)';
+                                    
+                                    $valeurTrouvee = false;
+                                    foreach ($colonnesAEssayer as $colMontant) {
+                                        if ($code === '3031' && $matchCount === 2) {
+                                            if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
+                                                $valeur = $rubric->formatValue($row[$colMontant]);
+                                                $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' (2ème occurrence) en colonne montant : ' . $colMontant;
+                                                $found = true;
+                                                $valeurTrouvee = true;
+                                                break;
+                                            }
+                                        }
+                                        if ($code !== '3031' && $matchCount === 1) {
+                                            if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
+                                                $valeur = $rubric->formatValue($row[$colMontant]);
+                                                $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' en colonne montant : ' . $colMontant;
+                                                $found = true;
+                                                $valeurTrouvee = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (!$valeurTrouvee) {
+                                        if ($code === '3031' && $matchCount === 2) {
+                                            $valeur = '0';
+                                            $detail = 'Rubrique trouvée mais toutes colonnes vides, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType . ' (2ème occurrence)';
                                             $found = true;
                                         }
-                                        break;
-                                    }
-                                    if ($code !== '3031' && $matchCount === 1) {
-                                        if (isset($row[$colMontant]) && $row[$colMontant] !== '' && $row[$colMontant] !== null) {
-                                            $valeur = $rubric->formatValue($row[$colMontant]);
-                                            $detail = 'Correspondance sur code (' . $code . ') et catégorie (' . $cat . ') dans le fichier ' . $sourceType . ' en colonne montant : ' . $colMontant;
-                                            $found = true;
-                                        } else {
-                                            $valeur = 0;
-                                            $detail = 'Colonne trouvée mais vide, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType;
+                                        if ($code !== '3031' && $matchCount === 1) {
+                                            $valeur = '0';
+                                            $detail = 'Rubrique trouvée mais toutes colonnes vides, valeur mise à 0 (' . $code . ', ' . $cat . ') dans le fichier ' . $sourceType;
                                             $found = true;
                                         }
-                                        break;
                                     }
+                                    
+                                    if ($found) break;
                                 }
                             }
                             if ($found) break;
                         }
+                        }
+                        
                         if (!$found) {
-                            $detail = 'Code rubrique non trouvé ou montant absent dans les fichiers (' . $code . ', ' . $cat . ')';
-                            $html .= '<tr style="background:#ffe0e0"><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($cat) . '</td><td>' . htmlspecialchars($nom) . '</td><td><b>Non trouvé</b></td><td>' . htmlspecialchars($detail ?: 'Aucune correspondance') . '</td></tr>';
-                        } else {
-                            $html .= '<tr><td>' . htmlspecialchars($code) . '</td><td>' . htmlspecialchars($cat) . '</td><td>' . htmlspecialchars($nom) . '</td><td>' . htmlspecialchars($valeur) . '</td><td>' . htmlspecialchars($detail) . '</td></tr>';
+                            if (in_array($code, $rubriquesPar0)) {
+                                $valeur = '0';
+                                $detail = 'Rubrique définie par défaut à 0 (' . $code . ', ' . $cat . ')';
+                            } else {
+                                $valeur = '0';
+                                $detail = 'Code rubrique non trouvé ou montant absent dans les fichiers (' . $code . ', ' . $cat . '), valeur mise à 0';
+                            }
+                        }
+
+                        $cleComposite = $code . '_' . $catNorm;
+                        
+                        if ($code === 'total' && $catNorm === 'a payer') {
+                            $nomNormalise = strtolower($nom);
+                            if (stripos($nomNormalise, 'brut') !== false) {
+                                $cleComposite = 'total_brut_a_payer';
+                            } elseif (stripos($nomNormalise, 'fiscal') !== false) {
+                                $cleComposite = 'total_fiscal';
+                            } elseif (stripos($nomNormalise, 'net') !== false) {
+                                $cleComposite = 'total_net_a_payer';
+                            }
+                        }
+                        
+                        $valeursParCode[$cleComposite] = $valeur;
+                    }
+                    
+                    $outputSpreadsheet = IOFactory::load($_FILES['output_file']['tmp_name']);
+                    $outputSheet = $outputSpreadsheet->getActiveSheet();
+                    
+                    $maxRow = $outputSheet->getHighestRow();
+                    
+                    $valeursEcrites = 0;
+                    for ($row = 1; $row <= $maxRow; $row++) {
+                        $cellValue = $outputSheet->getCell([1, $row])->getValue();
+                        
+                        $cellValueB = '';
+                        try {
+                            $cellValueB = $outputSheet->getCell([2, $row])->getValue();
+                        } catch (\Exception $e) {
+                            $cellValueB = '';
+                        }
+                        
+                        if ($cellValue) {
+                            $cellValue = trim($cellValue);
+                            $cellValueB = trim($cellValueB);
+                            $codeRubrique = null;
+                            
+                            $cellValueComplete = $cellValue . ' ' . $cellValueB;
+                            
+                            $matches = [];
+                            $codeRubrique = null;
+                            $categorieDeduiteFromExcel = null;
+                            
+                            if (stripos($cellValueComplete, 'agence') !== false && stripos($cellValueComplete, 'patronal') !== false) {
+                                $codeRubrique = 'agence';
+                                $categorieDeduiteFromExcel = 'patronal montant';
+                            }
+                            elseif (stripos($cellValueComplete, 'brut total') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'brut';
+                            }
+                            elseif (stripos($cellValueComplete, 'brut tranche a') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'tranche a';
+                            }
+                            elseif (stripos($cellValueComplete, 'brut tranche b') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'tranche b';
+                            }
+                            elseif (stripos($cellValueComplete, 'heures travaillées') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'heures travaillees';
+                            }
+                            elseif (stripos($cellValueComplete, 'net à payer') !== false || stripos($cellValueComplete, 'net a payer') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'net a payer';
+                            }
+                            elseif (stripos($cellValueComplete, 'total') !== false && stripos($cellValueComplete, 'brut') !== false && stripos($cellValueComplete, 'payer') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'brut_a_payer';
+                            }
+                            elseif (stripos($cellValueComplete, 'total') !== false && stripos($cellValueComplete, 'fiscal') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'fiscal';
+                            }
+                            elseif (stripos($cellValueComplete, 'total') !== false && stripos($cellValueComplete, 'net') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'net_a_payer';
+                            }
+                            elseif (stripos($cellValueComplete, 'total') !== false) {
+                                $codeRubrique = 'total';
+                                $categorieDeduiteFromExcel = 'a payer';
+                            }
+                            elseif (preg_match('/^(\d+)\s*(.*?)$/', $cellValue, $matches)) {
+                                $codeRubrique = $matches[1];
+                                $texteApresCode = trim($matches[2]);
+                                
+                                if (stripos($texteApresCode, 'patronal montant') !== false) {
+                                    $categorieDeduiteFromExcel = 'patronal montant';
+                                } elseif (stripos($texteApresCode, 'salarié montant') !== false || stripos($texteApresCode, 'salarie montant') !== false) {
+                                    $categorieDeduiteFromExcel = 'salarie montant';
+                                } elseif (stripos($texteApresCode, 'à payer') !== false || stripos($texteApresCode, 'a payer') !== false) {
+                                    $categorieDeduiteFromExcel = 'a payer';
+                                } elseif (stripos($texteApresCode, 'à retenir') !== false || stripos($texteApresCode, 'a retenir') !== false) {
+                                    $categorieDeduiteFromExcel = 'a retenir';
+                                } else {
+                                    $categorieDeduiteFromExcel = 'base';
+                                }
+                            }
+                            
+                            if ($codeRubrique && $categorieDeduiteFromExcel) {
+                                $cleComposite = $codeRubrique . '_' . $categorieDeduiteFromExcel;
+                                
+                                if (isset($valeursParCode[$cleComposite])) {
+                                    $valeurPourExcel = $valeursParCode[$cleComposite];
+                                    
+                                    $valeurPourExcel = str_replace([' ', ','], ['', '.'], $valeurPourExcel);
+                                    if (is_numeric($valeurPourExcel)) {
+                                        $valeurPourExcel = floatval($valeurPourExcel);
+                                    }
+                                    
+                                    $outputSheet->getCell([3, $row])->setValue($valeurPourExcel);
+                                    $valeursEcrites++;
+                                }
+                            }
                         }
                     }
-                    $html .= '</table>';
+                    
+                    $writer = IOFactory::createWriter($outputSpreadsheet, 'Xlsx');
+                    $tempFile = tempnam(sys_get_temp_dir(), 'output_') . '.xlsx';
+                    $writer->save($tempFile);
+                    
+                    $originalFileName = $_FILES['output_file']['name'];
+                    
+                    $response = new Response(file_get_contents($tempFile));
+                    $response->headers->set('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                    $response->headers->set('Content-Disposition', 'attachment; filename="' . $originalFileName . '"');
+                    
+                    unlink($tempFile);
+                    
+                    return $response;
+                } else {
+                    $message = ['error', 'Aucune agence sélectionnée ou aucune rubrique trouvée.'];
                 }
-                $message = ['success', $html];
 
             } else {
                 $message = ['error', implode('<br>', $errors)];
