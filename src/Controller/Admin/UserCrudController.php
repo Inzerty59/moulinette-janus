@@ -9,6 +9,10 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Doctrine\Persistence\ObjectManager;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
+use Doctrine\ORM\QueryBuilder;
 
 class UserCrudController extends AbstractCrudController
 {
@@ -55,8 +59,17 @@ class UserCrudController extends AbstractCrudController
                     $this->passwordHasher->hashPassword($entityInstance, $entityInstance->getPassword())
                 );
             }
-            $entityInstance->setRoles(['ROLE_USER']);
         }
         parent::updateEntity($entityManager, $entityInstance);
+    }
+
+    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
+    {
+        $queryBuilder = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
+        
+        $queryBuilder->andWhere('entity.email != :adminEmail')
+                    ->setParameter('adminEmail', 'florent.devynck@groupevitaminet.com');
+        
+        return $queryBuilder;
     }
 }
