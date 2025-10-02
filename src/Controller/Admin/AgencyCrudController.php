@@ -11,7 +11,9 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use Symfony\Component\Validator\Constraints\Date;
 use EasyCorp\Bundle\EasyAdminBundle\Field\CollectionField;
 use Doctrine\Persistence\ManagerRegistry;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+#[IsGranted('ROLE_USER')]
 class AgencyCrudController extends AbstractCrudController
 {
     private ManagerRegistry $doctrine;

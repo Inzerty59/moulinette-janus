@@ -6,11 +6,9 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
 </head>
 <body class="container mt-5">
-    <nav>
-        {% if is_granted('ROLE_ADMIN') %}
-            <a href="{{ path('admin') }}">Admin</a>
-        {% endif %}
-    </nav>
+    {% if app.user %}
+        <a href="{{ path('admin') }}">Admin</a>
+    {% endif %}
     {% if app.request.attributes.get('_route') != 'app_login' %}
     {% endif %}
     {% block body %}{% endblock %}

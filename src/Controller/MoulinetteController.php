@@ -11,6 +11,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 final class MoulinetteController extends AbstractController
 {
@@ -25,6 +26,27 @@ final class MoulinetteController extends AbstractController
 
     #[Route('/', name: 'app_home')]
     public function index(Request $request, AgencyRepository $agencyRepository): Response
+    {
+        if ($this->getUser()) {
+            return $this->redirectToRoute('admin');
+        }
+        
+        $agencies = $agencyRepository->findAll();
+        $message = null;
+        $selectedAgency = null;
+        $agencyRubrics = [];
+
+        return $this->render('moulinette/index.html.twig', [
+            'agencies' => $agencies,
+            'message' => $message,
+            'selectedAgency' => $selectedAgency,
+            'agencyRubrics' => $agencyRubrics,
+        ]);
+    }
+
+    #[Route('/moulinette', name: 'app_moulinette')]
+    #[IsGranted('ROLE_USER')]
+    public function moulinette(Request $request, AgencyRepository $agencyRepository): Response
     {
         $agencies = $agencyRepository->findAll();
         $message = null;
