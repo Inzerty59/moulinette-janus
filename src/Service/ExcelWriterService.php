@@ -4,6 +4,7 @@ namespace App\Service;
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
 use Psr\Log\LoggerInterface;
@@ -25,7 +26,15 @@ class ExcelWriterService
     ): array {
         try {
             $outputSpreadsheet = $this->excelReader->loadSpreadsheet($outputTemplateFile);
-            $outputSheet = $outputSpreadsheet->getActiveSheet();
+            
+            $outputSheet = $this->findTempoBancoSheet($outputSpreadsheet);
+            
+            if ($outputSheet === null) {
+                $outputSheet = $outputSpreadsheet->getActiveSheet();
+                $this->logger->info('Utilisation de la feuille active', [
+                    'sheet_name' => $outputSheet->getTitle()
+                ]);
+            }
             
             $maxRow = $outputSheet->getHighestRow();
             $writtenCount = 0;
@@ -41,6 +50,7 @@ class ExcelWriterService
 
             $this->logger->info('Fichier de sortie généré', [
                 'original_filename' => $outputTemplateFile->getClientOriginalName(),
+                'sheet_name' => $outputSheet->getTitle(),
                 'values_written' => $writtenCount,
                 'total_rows' => $maxRow
             ]);
@@ -59,7 +69,56 @@ class ExcelWriterService
         }
     }
 
-    private function processRow($outputSheet, int $row, array $calculatedValues): bool
+    private function findTempoBancoSheet(Spreadsheet $spreadsheet): ?Worksheet
+    {
+        $possibleNames = [
+            'Tempo-Banco',
+            'tempo-banco',
+            'TEMPO-BANCO',
+            'Tempo Banco',
+            'tempo banco',
+            'TEMPO BANCO',
+            'TempoBanco',
+            'tempobanco',
+            'TEMPOBANCO',
+        ];
+
+        foreach ($possibleNames as $name) {
+            try {
+                $sheet = $spreadsheet->getSheetByName($name);
+                if ($sheet !== null) {
+                    $this->logger->info('Onglet Tempo-Banco trouvé', [
+                        'sheet_name' => $name
+                    ]);
+                    return $sheet;
+                }
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+
+        foreach ($spreadsheet->getAllSheets() as $sheet) {
+            $sheetName = $sheet->getTitle();
+            $normalizedSheetName = $this->normalizeSheetName($sheetName);
+            
+            if ($normalizedSheetName === 'tempobanco') {
+                $this->logger->info('Onglet Tempo-Banco trouvé par normalisation', [
+                    'original_name' => $sheetName
+                ]);
+                return $sheet;
+            }
+        }
+
+        $this->logger->warning('Onglet Tempo-Banco non trouvé, utilisation de la feuille active');
+        return null;
+    }
+
+    private function normalizeSheetName(string $name): string
+    {
+        return strtolower(str_replace(['-', ' ', '_'], '', $name));
+    }
+
+    private function processRow(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $outputSheet, int $row, array $calculatedValues): bool
     {
         $cellValueA = $this->getCellValue($outputSheet, 1, $row);
         $cellValueB = $this->getCellValue($outputSheet, 2, $row);
@@ -93,7 +152,7 @@ class ExcelWriterService
         return false;
     }
 
-    private function getCellValue($outputSheet, int $column, int $row): string
+    private function getCellValue(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $outputSheet, int $column, int $row): string
     {
         try {
             $value = $outputSheet->getCell([$column, $row])->getValue();
@@ -167,7 +226,7 @@ class ExcelWriterService
         }
     }
 
-    private function prepareValueForExcel(string $value)
+    private function prepareValueForExcel(string $value): float|string
     {
         $numericValue = str_replace([' ', ','], ['', '.'], $value);
         
