@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\User;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Doctrine\Persistence\ObjectManager;
 use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
@@ -30,13 +31,24 @@ class UserCrudController extends AbstractCrudController
         return User::class;
     }
 
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud
+            ->setEntityLabelInSingular('Utilisateur')
+            ->setEntityLabelInPlural('Utilisateurs')
+            ->setPageTitle('new', 'Créer un nouvel utilisateur')
+            ->setPageTitle('edit', 'Modifier l\'utilisateur')
+            ->setPageTitle('index', 'Liste des utilisateurs')
+            ->setPageTitle('detail', 'Détails de l\'utilisateur');
+    }
+
     public function configureFields(string $pageName): iterable
     {
         return [
-            TextField::new('email'),
-            TextField::new('password')->onlyOnForms(),
-            TextField::new('firstName'),
-            TextField::new('lastName'),
+            TextField::new('email', 'Adresse e-mail'),
+            TextField::new('password', 'Mot de passe')->onlyOnForms(),
+            TextField::new('firstName', 'Prénom'),
+            TextField::new('lastName', 'Nom'),
         ];
     }
 

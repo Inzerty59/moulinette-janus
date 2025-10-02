@@ -4,6 +4,7 @@ namespace App\Controller\Admin;
 
 use App\Entity\Agency;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
@@ -27,15 +28,27 @@ class AgencyCrudController extends AbstractCrudController
     {
         return Agency::class;
     }
+
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud
+            ->setEntityLabelInSingular('Agence')
+            ->setEntityLabelInPlural('Agences')
+            ->setPageTitle('new', 'Créer une nouvelle agence')
+            ->setPageTitle('edit', 'Modifier l\'agence')
+            ->setPageTitle('index', 'Liste des agences')
+            ->setPageTitle('detail', 'Détails de l\'agence');
+    }
+
     public function configureFields(string $pageName): iterable
     {
         return [
                 IdField::new('id')->hideOnForm()->hideOnIndex()->hideOnDetail(),
-                TextField::new('code'),
-                TextField::new('name')->setTemplatePath('admin/field/agency_name_link.html.twig'),
-                TextField::new('timezone')->hideOnForm()->hideOnIndex()->hideOnDetail(),
-                DateTimeField::new('createdAt')->hideOnForm()->hideOnIndex()->hideOnDetail(),
-                CollectionField::new('agencyRubrics')
+                TextField::new('code', 'Code'),
+                TextField::new('name', 'Nom')->setTemplatePath('admin/field/agency_name_link.html.twig'),
+                TextField::new('timezone', 'Fuseau horaire')->hideOnForm()->hideOnIndex()->hideOnDetail(),
+                DateTimeField::new('createdAt', 'Créée le')->hideOnForm()->hideOnIndex()->hideOnDetail(),
+                CollectionField::new('agencyRubrics', 'Rubriques')
                 ->setEntryIsComplex(true)
                 ->setTemplatePath('admin/agency_rubrics_embedded.html.twig')
                 ->onlyOnDetail(),
