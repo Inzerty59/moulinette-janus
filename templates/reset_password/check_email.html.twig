@@ -1,11 +1,31 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Password Reset Email Sent{% endblock %}
+{% block title %}E-mail de réinitialisation envoyé{% endblock %}
 
 {% block body %}
-    <p>
-        If an account matching your email exists, then an email was just sent that contains a link that you can use to reset your password.
-        This link will expire in {{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}.
-    </p>
-    <p>If you don't receive an email please check your spam folder or <a href="{{ path('app_forgot_password_request') }}">try again</a>.</p>
+<div class="content-card">
+    <h1 class="page-title">E-mail envoyé !</h1>
+
+    <div class="alert alert-success">
+        <i class="fas fa-check-circle"></i>
+        <div>
+            <strong>Un e-mail a été envoyé</strong>
+            <p style="margin: 0.5rem 0 0 0;">
+                Si un compte correspond à votre adresse e-mail, un message contenant un lien de réinitialisation vous a été envoyé.
+                Ce lien expirera dans {{ resetToken.expirationMessageKey|trans(resetToken.expirationMessageData, 'ResetPasswordBundle') }}.
+            </p>
+        </div>
+    </div>
+
+    <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i>
+        Si vous ne recevez pas d'e-mail, vérifiez votre dossier spam ou <a href="{{ path('app_forgot_password_request') }}" style="color: var(--janus-dark); text-decoration: underline;">réessayez</a>.
+    </div>
+
+    <div style="text-align: center; margin-top: 1.5rem;">
+        <a href="{{ path('app_login') }}" class="btn-submit" style="text-decoration: none;">
+            <i class="fas fa-arrow-left"></i> Retour à la connexion
+        </a>
+    </div>
+</div>
 {% endblock %}
