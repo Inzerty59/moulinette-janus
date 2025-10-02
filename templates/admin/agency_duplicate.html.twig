@@ -1,0 +1,55 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block content_title %}
+    <i></i> Dupliquer {{ originalAgency.name }}
+{% endblock %}
+
+{% block main %}
+    <div class="card">
+        <div class="card-body">
+            <div class="alert alert-info mb-4">
+                <i class="fa fa-info-circle"></i>
+                Vous êtes sur le point de dupliquer <strong>{{ originalAgency.name }}</strong> 
+                avec ses <strong>{{ originalAgency.agencyRubrics|length }} rubriques</strong>.
+                Veuillez choisir le code et le nom pour la nouvelle agence.
+            </div>
+
+            <form method="post">
+                <div class="mb-3">
+                    <label for="code" class="form-label">Code de la nouvelle agence</label>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="code" 
+                        name="code" 
+                        placeholder="LESQUIN" 
+                        required
+                        maxlength="32"
+                    >
+                </div>
+
+                <div class="mb-3">
+                    <label for="name" class="form-label">Nom de la nouvelle agence</label>
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="name" 
+                        name="name" 
+                        placeholder="Agence de Lesquin" 
+                        required
+                        maxlength="255"
+                    >
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{{ ea_url().setController('App\\Controller\\Admin\\AgencyCrudController').setAction('index') }}" class="btn btn-secondary">
+                        <i></i> Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i></i> Créer la duplication
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endblock %}
