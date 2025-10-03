@@ -216,7 +216,7 @@ h1, h2, h3, h4, h5, h6 {
     transition: all var(--transition-speed) ease;
 }
 
-.content-card a:hover {
+.content-card a:hover:not(.btn-submit) {
     color: var(--janus-red);
 }
 
@@ -239,6 +239,7 @@ h1, h2, h3, h4, h5, h6 {
 .btn-submit:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(230, 57, 70, 0.4);
+    color: var(--janus-white);
 }
 
 .btn-submit:active {
