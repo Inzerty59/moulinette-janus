@@ -37,15 +37,26 @@ class AgencyRubricCrudController extends AbstractCrudController
         return AgencyRubric::class;
     }
     
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud
+            ->setEntityLabelInSingular('Rubrique d\'agence')
+            ->setEntityLabelInPlural('Rubriques d\'agence')
+            ->setPageTitle('index', 'Rubriques d\'agence')
+            ->setPageTitle('new', 'Créer une rubrique')
+            ->setPageTitle('edit', 'Modifier la rubrique')
+            ->setPageTitle('detail', 'Rubrique');
+    }
+    
     public function configureFields(string $pageName): iterable
     {
         return [
-            TextField::new('code'),
-            TextField::new('name'),
-            TextField::new('category'),
-            AssociationField::new('agency')->hideOnForm(),
-            DateTimeField::new('createdAt')->hideOnForm()->hideOnIndex()->hideOnDetail(),
-            DateTimeField::new('updatedAt')->hideOnForm()->hideOnIndex()->hideOnDetail(),
+            TextField::new('code')->setLabel('Code'),
+            TextField::new('name')->setLabel('Nom'),
+            TextField::new('category')->setLabel('Catégorie'),
+            AssociationField::new('agency')->setLabel('Agence')->hideOnForm(),
+            DateTimeField::new('createdAt')->setLabel('Créé le')->hideOnForm()->hideOnIndex()->hideOnDetail(),
+            DateTimeField::new('updatedAt')->setLabel('Modifié le')->hideOnForm()->hideOnIndex()->hideOnDetail(),
         ];
     }
 

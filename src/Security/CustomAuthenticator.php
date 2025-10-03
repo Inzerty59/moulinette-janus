@@ -45,16 +45,12 @@ class CustomAuthenticator extends AbstractAuthenticator
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
-        $user = $token->getUser();
-        if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
-            return new \Symfony\Component\HttpFoundation\RedirectResponse('/admin');
-        }
-        return new \Symfony\Component\HttpFoundation\RedirectResponse('/');
+        return new \Symfony\Component\HttpFoundation\RedirectResponse('/moulinette');
     }
 
     public function onAuthenticationFailure(Request $request, AuthenticationException $exception): ?Response
     {
-        $request->getSession()->getFlashBag()->add('error', strtr($exception->getMessageKey(), $exception->getMessageData()));
+        $request->getSession()->set('_security.last_error', $exception);
         return new \Symfony\Component\HttpFoundation\RedirectResponse('/login');
     }
 

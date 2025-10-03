@@ -19,7 +19,7 @@ services:
     container_name: moulinette_php
     restart: unless-stopped
     environment:
-      APP_ENV: dev
+      APP_ENV: ${APP_ENV}
       APP_SECRET: ${APP_SECRET}
       DATABASE_URL: >-
         mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}?serverVersion=mariadb-11.0.0

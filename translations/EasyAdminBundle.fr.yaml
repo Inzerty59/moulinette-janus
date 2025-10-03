@@ -1,0 +1,44 @@
+paginator:
+  results: '{0} Aucun résultat|{1} 1 résultat|]1,Inf] %count% résultats'
+  page_size: 'Éléments par page'
+
+action:
+  new: 'Créer'
+  edit: 'Modifier'
+  delete: 'Supprimer'
+  detail: 'Détails'
+  save: 'Enregistrer'
+  cancel: 'Annuler'
+  back_to_list: 'Retour à la liste'
+  add: 'Ajouter'
+  remove: 'Retirer'
+
+label:
+  email: 'Adresse e-mail'
+  password: 'Mot de passe'
+  first_name: 'Prénom'
+  last_name: 'Nom'
+  created_at: 'Créé le'
+  updated_at: 'Modifié le'
+
+delete_confirm:
+  title: 'Confirmer la suppression'
+  content: 'Êtes-vous sûr de vouloir supprimer cet élément ?'
+
+flash:
+  created: 'L''élément a été créé avec succès.'
+  updated: 'L''élément a été modifié avec succès.'
+  deleted: 'L''élément a été supprimé avec succès.'
+
+filter:
+  title: 'Filtres'
+  reset: 'Réinitialiser'
+  apply: 'Appliquer'
+
+search:
+  placeholder: 'Rechercher...'
+  no_results: 'Aucun résultat trouvé'
+
+form:
+  required: 'Ce champ est obligatoire'
+  invalid: 'Cette valeur n''est pas valide'

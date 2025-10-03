@@ -1,18 +1,40 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>{% block title %}Mon site Symfony{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Moulinette Janus{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ asset('images/cropped-favicon.png') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Calistoga&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ asset('css/main.css') }}?v={{ 'now'|date('U') }}">
+    
+    {% block stylesheets %}{% endblock %}
 </head>
-<body class="container mt-5">
-    <nav>
-        {% if is_granted('ROLE_ADMIN') %}
-            <a href="{{ path('admin') }}">Admin</a>
-        {% endif %}
+<body>
+    <nav class="top-nav">
+        <div class="container">
+            <div class="logo-section">
+                <img src="{{ asset('images/logo-janus.svg') }}" alt="Logo Janus">
+            </div>
+            <div class="nav-links">
+                {% if app.user %}
+                    <a href="{{ path('admin') }}" aria-label="Accéder à l'administration">
+                        <i class="fas fa-cog" aria-hidden="true"></i> Admin
+                    </a>
+                    <a href="{{ path('app_logout') }}" aria-label="Se déconnecter">
+                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i> Déconnexion
+                    </a>
+                {% endif %}
+            </div>
+        </div>
     </nav>
-    {% if app.request.attributes.get('_route') != 'app_login' %}
-    {% endif %}
-    {% block body %}{% endblock %}
+    <main class="main-container">
+        {% block body %}{% endblock %}
+    </main>
+    
+    {% block javascripts %}{% endblock %}
 </body>
 </html>
