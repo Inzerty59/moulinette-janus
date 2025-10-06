@@ -231,7 +231,8 @@ class ExcelWriterService
         $numericValue = str_replace([' ', ','], ['', '.'], $value);
         
         if (is_numeric($numericValue)) {
-            return abs(floatval($numericValue));
+
+            return floatval($numericValue);
         }
         
         return $value;

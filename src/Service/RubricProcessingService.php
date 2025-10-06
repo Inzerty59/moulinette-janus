@@ -343,7 +343,7 @@ class RubricProcessingService
 
         foreach ($columnsToTry as $colIndex) {
             if (isset($row[$colIndex]) && $row[$colIndex] !== '' && $row[$colIndex] !== null) {
-                $value = $this->formatValue($row[$colIndex]);
+                $value = $this->formatValue($row[$colIndex], $code, $categoryNormalized);
                 $detail = $this->generateDetail($code, $categoryNormalized, $sourceType, $colIndex, $matchCount);
                 
                 return [
@@ -396,10 +396,20 @@ class RubricProcessingService
         return $code . '_' . $categoryNormalized;
     }
 
-    private function formatValue($value): string
+    private function formatValue($value, string $code = '', string $category = ''): string
     {
         if (is_numeric($value)) {
-            return number_format(abs(floatval($value)), 2, ',', ' ');
+            $floatValue = floatval($value);
+            
+            $rubricsWithNegativeSign = ['3006', '3202', '3402', '3404'];
+            $shouldKeepNegativeSign = (in_array($code, $rubricsWithNegativeSign) && $category === 'base') 
+                                    || ($code === 'total' && $category === 'tranche b');
+            
+            if ($shouldKeepNegativeSign && $floatValue < 0) {
+                return number_format($floatValue, 2, ',', ' ');
+            } else {
+                return number_format(abs($floatValue), 2, ',', ' ');
+            }
         }
         
         return (string) $value;
