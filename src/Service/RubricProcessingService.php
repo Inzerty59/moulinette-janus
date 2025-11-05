@@ -226,6 +226,10 @@ class RubricProcessingService
             return ['value' => '', 'detail' => '', 'found' => false];
         }
 
+        if ($code === '3031') {
+            return $this->searchAndSumRubrique3031($code, $name, $rows, $columnsToTry, $categoryNormalized, $sourceType);
+        }
+
         $matchCount = 0;
         foreach ($rows as $rowIdx => $row) {
             if ($rowIdx === 0) continue;
@@ -240,6 +244,51 @@ class RubricProcessingService
                     return $result;
                 }
             }
+        }
+
+        return ['value' => '', 'detail' => '', 'found' => false];
+    }
+
+    private function searchAndSumRubrique3031(string $code, string $name, array $rows, array $columnsToTry, string $categoryNormalized, string $sourceType): array
+    {
+        $values = [];
+        $details = [];
+        $matchCount = 0;
+
+        foreach ($rows as $rowIdx => $row) {
+            if ($rowIdx === 0) continue;
+
+            $searchMatch = $this->isRowMatch($code, $name, $row, $categoryNormalized, $sourceType);
+            
+            if ($searchMatch) {
+                $matchCount++;
+                
+                foreach ($columnsToTry as $colIndex) {
+                    if (isset($row[$colIndex]) && $row[$colIndex] !== '' && $row[$colIndex] !== null) {
+                        $rawValue = $row[$colIndex];
+                        $values[] = floatval($rawValue);
+                        $details[] = "Occurrence {$matchCount} : {$rawValue} (colonne {$colIndex})";
+                        break;
+                    }
+                }
+                
+                if ($matchCount > 0 && empty($values)) {
+                    $values[] = 0;
+                    $details[] = "Occurrence {$matchCount} : valeur vide";
+                }
+            }
+        }
+
+        if (!empty($values)) {
+            $sum = array_sum($values);
+            $formattedValue = $this->formatValue($sum, $code, $categoryNormalized);
+            $detailMessage = "Somme des {$matchCount} occurrence(s) : " . implode(' + ', $values) . " = " . $sum;
+            
+            return [
+                'value' => $formattedValue,
+                'detail' => $detailMessage . " | Détails : " . implode(" | ", $details),
+                'found' => true
+            ];
         }
 
         return ['value' => '', 'detail' => '', 'found' => false];
@@ -335,7 +384,7 @@ class RubricProcessingService
         string $categoryNormalized,
         string $sourceType
     ): array {
-        $shouldUseMatch = ($code === '3031' && $matchCount === 2) || ($code !== '3031' && $matchCount === 1);
+        $shouldUseMatch = ($matchCount === 1);
         
         if (!$shouldUseMatch) {
             return ['value' => '', 'detail' => '', 'found' => false];
@@ -417,13 +466,11 @@ class RubricProcessingService
 
     private function generateDetail(string $code, string $category, string $sourceType, int $columnIndex, int $matchCount): string
     {
-        $occurrenceText = $code === '3031' && $matchCount === 2 ? ' (2ème occurrence)' : '';
-        return "Correspondance sur code ({$code}) et catégorie ({$category}) dans le fichier {$sourceType}{$occurrenceText} en colonne montant : {$columnIndex}";
+        return "Correspondance sur code ({$code}) et catégorie ({$category}) dans le fichier {$sourceType} en colonne montant : {$columnIndex}";
     }
 
     private function generateEmptyDetail(string $code, string $category, string $sourceType, int $matchCount): string
     {
-        $occurrenceText = $code === '3031' && $matchCount === 2 ? ' (2ème occurrence)' : '';
-        return "Rubrique trouvée mais toutes colonnes vides, valeur mise à 0 ({$code}, {$category}) dans le fichier {$sourceType}{$occurrenceText}";
+        return "Rubrique trouvée mais toutes colonnes vides, valeur mise à 0 ({$code}, {$category}) dans le fichier {$sourceType}";
     }
 }
