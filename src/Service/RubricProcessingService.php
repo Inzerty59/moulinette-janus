@@ -404,8 +404,9 @@ class RubricProcessingService
         }
 
         $detail = $this->generateEmptyDetail($code, $categoryNormalized, $sourceType, $matchCount);
+        $zeroValue = $this->formatValue(0, $code, $categoryNormalized);
         return [
-            'value' => '0',
+            'value' => $zeroValue,
             'detail' => $detail,
             'found' => true
         ];

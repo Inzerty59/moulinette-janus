@@ -46,6 +46,8 @@ class ExcelWriterService
                 }
             }
 
+            $this->fillEmptyBrutTrancheBCells($outputSheet);
+
             $response = $this->createDownloadResponse($outputSpreadsheet, $outputTemplateFile->getClientOriginalName());
 
             $this->logger->info('Fichier de sortie généré', [
@@ -116,6 +118,31 @@ class ExcelWriterService
     private function normalizeSheetName(string $name): string
     {
         return strtolower(str_replace(['-', ' ', '_'], '', $name));
+    }
+
+    private function fillEmptyBrutTrancheBCells(Worksheet $outputSheet): void
+    {
+        $maxRow = $outputSheet->getHighestRow();
+
+        for ($row = 1; $row <= $maxRow; $row++) {
+            $cellValueA = $this->getCellValue($outputSheet, 1, $row);
+            $cellValueB = $this->getCellValue($outputSheet, 2, $row);
+
+            if (empty($cellValueA)) {
+                continue;
+            }
+
+            $cellValueComplete = trim($cellValueA . ' ' . $cellValueB);
+            $cellValueCompleteLower = strtolower($cellValueComplete);
+
+            if (stripos($cellValueCompleteLower, 'brut tranche b') !== false) {
+                $cellValue = $this->getCellValue($outputSheet, 3, $row);
+                
+                if (empty($cellValue)) {
+                    $outputSheet->getCell([3, $row])->setValue('0,00');
+                }
+            }
+        }
     }
 
     private function processRow(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $outputSheet, int $row, array $calculatedValues): bool
