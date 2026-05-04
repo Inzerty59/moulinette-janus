@@ -255,7 +255,14 @@ class ExcelWriterService
 
     private function prepareValueForExcel(string $value): float|string
     {
-        $numericValue = str_replace([' ', ','], ['', '.'], $value);
+        $numericValue = trim($value);
+        $numericValue = str_replace(["\xc2\xa0", "\xe2\x80\xaf", ' '], '', $numericValue);
+        $numericValue = str_replace(["\xe2\x88\x92", "\xe2\x80\x93", "\xe2\x80\x94"], '-', $numericValue);
+
+        if (str_contains($numericValue, ',')) {
+            $numericValue = str_replace('.', '', $numericValue);
+            $numericValue = str_replace(',', '.', $numericValue);
+        }
         
         if (is_numeric($numericValue)) {
 

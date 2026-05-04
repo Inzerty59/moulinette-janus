@@ -266,7 +266,7 @@ class RubricProcessingService
                 foreach ($columnsToTry as $colIndex) {
                     if (isset($row[$colIndex]) && $row[$colIndex] !== '' && $row[$colIndex] !== null) {
                         $rawValue = $row[$colIndex];
-                        $values[] = floatval($rawValue);
+                        $values[] = $this->parseNumericValue($rawValue) ?? 0.0;
                         $details[] = "Occurrence {$matchCount} : {$rawValue} (colonne {$colIndex})";
                         break;
                     }
@@ -281,7 +281,7 @@ class RubricProcessingService
 
         if (!empty($values)) {
             $sum = array_sum($values);
-            $formattedValue = $this->formatValue($sum, $code, $categoryNormalized);
+            $formattedValue = $this->formatValue($sum, $code, $categoryNormalized, $sourceType);
             $detailMessage = "Somme des {$matchCount} occurrence(s) : " . implode(' + ', $values) . " = " . $sum;
             
             return [
@@ -392,7 +392,7 @@ class RubricProcessingService
 
         foreach ($columnsToTry as $colIndex) {
             if (isset($row[$colIndex]) && $row[$colIndex] !== '' && $row[$colIndex] !== null) {
-                $value = $this->formatValue($row[$colIndex], $code, $categoryNormalized);
+                $value = $this->formatValue($row[$colIndex], $code, $categoryNormalized, $sourceType);
                 $detail = $this->generateDetail($code, $categoryNormalized, $sourceType, $colIndex, $matchCount);
                 
                 return [
@@ -403,13 +403,7 @@ class RubricProcessingService
             }
         }
 
-        $detail = $this->generateEmptyDetail($code, $categoryNormalized, $sourceType, $matchCount);
-        $zeroValue = $this->formatValue(0, $code, $categoryNormalized);
-        return [
-            'value' => $zeroValue,
-            'detail' => $detail,
-            'found' => true
-        ];
+        return ['value' => '', 'detail' => '', 'found' => false];
     }
 
     private function applyDefaultRules(string $code, string $category): array
@@ -446,23 +440,65 @@ class RubricProcessingService
         return $code . '_' . $categoryNormalized;
     }
 
-    private function formatValue($value, string $code = '', string $category = ''): string
+    private function formatValue($value, string $code = '', string $category = '', string $sourceType = ''): string
     {
-        if (is_numeric($value)) {
-            $floatValue = floatval($value);
-            
-            $rubricsWithNegativeSign = ['3006', '3202', '3402', '3404'];
-            $shouldKeepNegativeSign = (in_array($code, $rubricsWithNegativeSign) && $category === 'base') 
-                                    || ($code === 'total' && $category === 'tranche b');
-            
-            if ($shouldKeepNegativeSign && $floatValue < 0) {
-                return number_format($floatValue, 2, ',', ' ');
-            } else {
-                return number_format(abs($floatValue), 2, ',', ' ');
-            }
+        $floatValue = $this->parseNumericValue($value);
+
+        if ($floatValue !== null) {
+            $valueToFormat = $this->shouldKeepNegativeSign($code, $category, $sourceType)
+                ? $floatValue
+                : abs($floatValue);
+
+            return number_format($valueToFormat, 2, ',', ' ');
         }
         
         return (string) $value;
+    }
+
+    private function shouldKeepNegativeSign(string $code, string $category, string $sourceType): bool
+    {
+        if ($code === 'total' && $category === 'tranche b') {
+            return true;
+        }
+
+        if ($category !== 'base') {
+            return false;
+        }
+
+        if ($sourceType === 'rubrique') {
+            return true;
+        }
+
+        $rubricsWithNegativeSign = ['3006', '3202', '3402', '3404'];
+
+        return in_array($code, $rubricsWithNegativeSign, true);
+    }
+
+    private function parseNumericValue($value): ?float
+    {
+        if (is_int($value) || is_float($value)) {
+            return (float) $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $normalizedValue = trim($value);
+
+        if ($normalizedValue === '') {
+            return null;
+        }
+
+        $normalizedValue = str_replace(["\xc2\xa0", "\xe2\x80\xaf", ' '], '', $normalizedValue);
+        $normalizedValue = str_replace(["\xe2\x88\x92", "\xe2\x80\x93", "\xe2\x80\x94"], '-', $normalizedValue);
+
+        if (str_contains($normalizedValue, ',')) {
+            $normalizedValue = str_replace('.', '', $normalizedValue);
+            $normalizedValue = str_replace(',', '.', $normalizedValue);
+        }
+
+        return is_numeric($normalizedValue) ? (float) $normalizedValue : null;
     }
 
     private function generateDetail(string $code, string $category, string $sourceType, int $columnIndex, int $matchCount): string
