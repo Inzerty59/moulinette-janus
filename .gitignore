@@ -10,3 +10,4 @@
 ###< symfony/framework-bundle ###
 *.sql
 backup_db.sh
+GEIQ

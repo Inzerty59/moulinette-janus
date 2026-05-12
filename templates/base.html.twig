@@ -21,6 +21,11 @@
             </div>
             <div class="nav-links">
                 {% if app.user %}
+                    {% set currentRoute = app.request.attributes.get('_route') %}
+                    {% set isGeiqPage = currentRoute == 'app_geiq' %}
+                    <a href="{{ path(isGeiqPage ? 'app_moulinette' : 'app_geiq') }}" aria-label="{{ isGeiqPage ? 'Accéder à Moulinette Janus' : 'Accéder à Moulinette GEIQ' }}">
+                        {{ isGeiqPage ? 'Moulinette Janus' : 'Moulinette GEIQ' }}
+                    </a>
                     <a href="{{ path('admin') }}" aria-label="Accéder à l'administration">
                         <i class="fas fa-cog" aria-hidden="true"></i> Admin
                     </a>
