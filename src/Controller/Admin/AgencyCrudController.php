@@ -43,6 +43,7 @@ class AgencyCrudController extends AbstractCrudController
         return $crud
             ->setEntityLabelInSingular('Agence')
             ->setEntityLabelInPlural('Agences')
+            ->setDefaultSort(['name' => 'ASC'])
             ->setPageTitle('new', 'Créer une nouvelle agence')
             ->setPageTitle('edit', 'Modifier l\'agence')
             ->setPageTitle('index', 'Liste des agences')

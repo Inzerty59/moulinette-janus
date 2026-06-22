@@ -469,7 +469,7 @@ class RubricProcessingService
             return true;
         }
 
-        $rubricsWithNegativeSign = ['3006', '3202', '3402', '3404'];
+        $rubricsWithNegativeSign = ['3006', '3202', '3212', '3402', '3404'];
 
         return in_array($code, $rubricsWithNegativeSign, true);
     }

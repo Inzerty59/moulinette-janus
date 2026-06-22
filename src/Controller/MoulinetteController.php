@@ -31,7 +31,7 @@ final class MoulinetteController extends AbstractController
             return $this->redirectToRoute('admin');
         }
         
-        $agencies = $agencyRepository->findAll();
+        $agencies = $agencyRepository->findBy([], ['name' => 'ASC']);
         $message = null;
         $selectedAgency = null;
         $agencyRubrics = [];
@@ -48,7 +48,7 @@ final class MoulinetteController extends AbstractController
     #[IsGranted('ROLE_USER')]
     public function moulinette(Request $request, AgencyRepository $agencyRepository): Response
     {
-        $agencies = $agencyRepository->findAll();
+        $agencies = $agencyRepository->findBy([], ['name' => 'ASC']);
         $message = null;
         $selectedAgency = null;
         $agencyRubrics = [];
