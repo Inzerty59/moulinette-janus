@@ -19,6 +19,14 @@ return [
             'value_field' => 'part_patronale',
         ],
         [
+            'match_label' => 'Brut Cotisé',
+            'value_field' => 'base',
+        ],
+        [
+            'match_label' => 'Brut Plafonné',
+            'value_field' => 'base',
+        ],
+        [
             'match_label' => 'Cplt Bases Retraite',
             'include_codes' => ['3360'],
             'skip_totalisation' => true,

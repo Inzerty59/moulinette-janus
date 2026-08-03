@@ -256,6 +256,10 @@ class GeiqService
 
             $dsnValue = $this->resolveSheetValue($codes, $labelNormalized, $dsnLookup);
 
+            if ($dsnValue === null && $totalisationValue !== null && !$totalisationSkipped) {
+                $dsnValue = $totalisationValue;
+            }
+
             if ($totalisationValue === null && $dsnValue === null && !$totalisationSkipped) {
                 $anomalies[] = new GeiqControlAnomalyDTO(
                     $row,
@@ -276,22 +280,12 @@ class GeiqService
                 $written++;
             }
 
-            if (!$totalisationSkipped && $totalisationValue !== null && $dsnValue !== null) {
-                $sheet->setCellValue($this->cellAddress($monthColumnStart + 2, $row), $totalisationValue - $dsnValue);
-                $written++;
-            } elseif (!$totalisationSkipped && $totalisationValue === null) {
+            if (!$totalisationSkipped && $totalisationValue === null) {
                 $anomalies[] = new GeiqControlAnomalyDTO(
                     $row,
                     $label,
                     $codes,
                     'Valeur totalisation manquante.'
-                );
-            } elseif ($dsnValue === null && !$totalisationSkipped) {
-                $anomalies[] = new GeiqControlAnomalyDTO(
-                    $row,
-                    $label,
-                    $codes,
-                    'Valeur DSN manquante.'
                 );
             }
         }
