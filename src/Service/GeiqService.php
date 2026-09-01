@@ -290,7 +290,33 @@ class GeiqService
             }
         }
 
+        $this->replicateFormulasToDsnColumn($sheet, $monthColumnStart, $maxRow);
+
         return new GeiqControlSheetResultDTO($written, $anomalies);
+    }
+
+    private function replicateFormulasToDsnColumn(Worksheet $sheet, int $monthColumnStart, int $maxRow): void
+    {
+        $totColLetter = Coordinate::stringFromColumnIndex($monthColumnStart);
+        $dsnColLetter = Coordinate::stringFromColumnIndex($monthColumnStart + 1);
+
+        for ($row = 1; $row <= $maxRow; $row++) {
+            $totValue = $sheet->getCell([$monthColumnStart, $row])->getValue();
+            $dsnValue = $sheet->getCell([$monthColumnStart + 1, $row])->getValue();
+
+            if (
+                is_string($totValue) &&
+                str_starts_with($totValue, '=') &&
+                ($dsnValue === null || $dsnValue === '')
+            ) {
+                $adaptedFormula = preg_replace(
+                    '/' . preg_quote($totColLetter, '/') . '(\d+)/',
+                    $dsnColLetter . '$1',
+                    $totValue
+                );
+                $sheet->setCellValue([$monthColumnStart + 1, $row], $adaptedFormula);
+            }
+        }
     }
 
     /**

@@ -39,8 +39,8 @@ return [
         [
             'match_label' => 'Montant PAS',
             'include_codes' => ['8920'],
-            // PAS géré séparément, ne pas écrire la valeur totalisation
-            'skip_totalisation' => true,
+            // Le montant du PAS est dans le champ "montant" (pas "base" qui est l'assiette)
+            'value_field' => 'montant',
         ],
         [
             'match_label' => 'Epargne PEE',

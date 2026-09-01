@@ -311,7 +311,10 @@ class GeiqPdfParsingService
             $base = $this->normalizeAmount($numbers[0]);
             $montant = $this->normalizeAmount($numbers[1]);
         } else {
-            $montant = $this->normalizeAmount($numbers[0]);
+            // A single value is semantically a base amount (e.g. code 8920: taxable PAS base, not PAS withheld).
+            // pickStructuredValue checks montant first then base, so behaviour is identical for auto-field codes.
+            // value_field:'montant' will correctly return null when only a base is present.
+            $base = $this->normalizeAmount($numbers[0]);
         }
 
         return [
